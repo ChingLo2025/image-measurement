@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Measurement, Mode, Point } from "../core/types";
-import { norm, perp, sub } from "../core/math";
-import { clipInfiniteLineToRect } from "../core/clip";
+import { drawDot, drawLine, drawNormalTicks } from "../core/draw";
 import {
   canvasToImg,
   computeContainViewport,
@@ -14,6 +13,8 @@ type Props = {
   mode: Mode;
   measurements: Measurement[];
   currentP1: Point | null;
+  guideLines: { p1: Point; p2: Point; mode: Mode }[];
+  guidePreview: { p1: Point; p2: Point; mode: Mode } | null;
   onPickPoint: (pImg: Point) => void;
   onHover: (pImg: Point | null) => void;
 };
@@ -23,6 +24,8 @@ export default function MeasureCanvas({
   mode,
   measurements,
   currentP1,
+  guideLines,
+  guidePreview,
   onPickPoint,
   onHover,
 }: Props) {
@@ -111,65 +114,60 @@ export default function MeasureCanvas({
     // 影像
     ctx.drawImage(image, vp.offsetX, vp.offsetY, vp.drawW, vp.drawH);
 
-    const imgW = image.width;
-    const imgH = image.height;
-
     // helpers
-    const drawLine = (a: Point, b: Point, width = 1) => {
-      const A = imgToCanvas(a, vp);
-      const B = imgToCanvas(b, vp);
-      ctx.lineWidth = width;
-      ctx.beginPath();
-      ctx.moveTo(A.x, A.y);
-      ctx.lineTo(B.x, B.y);
-      ctx.stroke();
-    };
-
-    const drawDot = (p: Point, r = 3) => {
-      const P = imgToCanvas(p, vp);
-      ctx.beginPath();
-      ctx.arc(P.x, P.y, r, 0, Math.PI * 2);
-      ctx.fill();
-    };
-
-    const drawAuxNormals = (p1: Point, p2: Point, mode: Mode) => {
-      const v = sub(p2, p1);
-      const n = norm(perp(v));
-      if (!n) return;
-
-      // line through p1, perpendicular to v
-      if (mode === "pl" || mode === "ll") {
-        const seg = clipInfiniteLineToRect(p1, n, imgW, imgH);
-        if (seg) drawLine(seg[0], seg[1], 1);
-      }
-
-      // line through p2, perpendicular to v (only ll)
-      if (mode === "ll") {
-        const seg = clipInfiniteLineToRect(p2, n, imgW, imgH);
-        if (seg) drawLine(seg[0], seg[1], 1);
-      }
-    };
+    const toCanvas = (p: Point) => imgToCanvas(p, vp);
 
     // 已完成量測：留「輔助線 + 端點」
     ctx.strokeStyle = "rgba(255,255,255,0.85)";
     ctx.fillStyle = "rgba(255,255,255,0.95)";
     for (const m of measurements) {
-      drawLine(m.p1, m.p2, 1.5);          // 輔助線 1（量測線）
-      drawAuxNormals(m.p1, m.p2, m.mode); // 輔助線 2/3（依模式）
-      drawDot(m.p1, 3.2);                 // 端點
-      drawDot(m.p2, 3.2);
+      drawLine(ctx, m.p1, m.p2, toCanvas, 1.5); // 輔助線 1（量測線）
+      drawNormalTicks(ctx, m.p1, m.p2, toCanvas, m.mode, { length: 16, width: 1 });
+      drawDot(ctx, m.p1, toCanvas, 3.2); // 端點
+      drawDot(ctx, m.p2, toCanvas, 3.2);
+    }
+
+    if (guideLines.length > 0) {
+      ctx.strokeStyle = "rgba(255,255,0,0.85)";
+      ctx.fillStyle = "rgba(255,255,0,0.95)";
+      for (const g of guideLines) {
+        drawLine(ctx, g.p1, g.p2, toCanvas, 1.5);
+        drawNormalTicks(ctx, g.p1, g.p2, toCanvas, g.mode, { length: 18, width: 1 });
+        drawDot(ctx, g.p1, toCanvas, 3.2);
+        drawDot(ctx, g.p2, toCanvas, 3.2);
+      }
     }
 
     // 預覽（正在量）
     if (currentP1 && hoverImg) {
       ctx.strokeStyle = "rgba(0,255,255,0.9)";
       ctx.fillStyle = "rgba(0,255,255,0.95)";
-      drawLine(currentP1, hoverImg, 1.5);
-      drawAuxNormals(currentP1, hoverImg, mode);
-      drawDot(currentP1, 3.5);
-      drawDot(hoverImg, 3.5);
+      drawLine(ctx, currentP1, hoverImg, toCanvas, 1.5);
+      drawNormalTicks(ctx, currentP1, hoverImg, toCanvas, mode, { length: 16, width: 1 });
+      drawDot(ctx, currentP1, toCanvas, 3.5);
+      drawDot(ctx, hoverImg, toCanvas, 3.5);
     }
-  }, [image, vp, size.h, size.w, measurements, currentP1, hoverImg, mode]);
+
+    if (guidePreview) {
+      ctx.strokeStyle = "rgba(255,255,0,0.7)";
+      ctx.fillStyle = "rgba(255,255,0,0.9)";
+      drawLine(ctx, guidePreview.p1, guidePreview.p2, toCanvas, 1.5);
+      drawNormalTicks(ctx, guidePreview.p1, guidePreview.p2, toCanvas, guidePreview.mode, { length: 18, width: 1 });
+      drawDot(ctx, guidePreview.p1, toCanvas, 3.5);
+      drawDot(ctx, guidePreview.p2, toCanvas, 3.5);
+    }
+  }, [
+    image,
+    vp,
+    size.h,
+    size.w,
+    measurements,
+    currentP1,
+    hoverImg,
+    mode,
+    guideLines,
+    guidePreview,
+  ]);
 
   return (
     <div
