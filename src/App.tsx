@@ -3,6 +3,7 @@ import MeasureCanvas from "./components/MeasureCanvas";
 import type { Calibration, Measurement, Mode, Point, Stage } from "./core/types";
 import { dist } from "./core/math";
 import { downloadTextFile, measurementsToCsv } from "./core/csv";
+import { NORMAL_MARK_LENGTH, getNormalSegments } from "./core/overlay";
 
 function modeIcon(mode: Mode) {
   // 依你要求：都用「點＋線」風格，不用 ⟂
@@ -169,6 +170,41 @@ export default function App() {
     downloadTextFile("sem_measurements.csv", csv);
   }
 
+  function downloadPng() {
+    if (!image || measurements.length === 0) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.drawImage(image, 0, 0);
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+
+    const drawLine = (a: Point, b: Point, width = 1) => {
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    };
+
+    for (const m of measurements) {
+      drawLine(m.p1, m.p2, 1.5);
+      const segments = getNormalSegments(m.p1, m.p2, m.mode, NORMAL_MARK_LENGTH);
+      for (const seg of segments) {
+        drawLine(seg[0], seg[1], 1);
+      }
+    }
+
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sem_measurements.png";
+    a.click();
+  }
+
   return (
     <div style={{ maxWidth: 980, margin: "24px auto", padding: "0 16px", fontFamily: "system-ui" }}>
       <h2 style={{ margin: "0 0 12px" }}>SEM Measurement (Lightweight)</h2>
@@ -205,6 +241,9 @@ export default function App() {
             currentP1={
               stage === "measure" ? currentP1 : null
             }
+            calibrationP1={stage === "calibrate" ? calP1 : null}
+            calibrationP2={stage === "calibrate" ? calP2 : null}
+            showCalibration={stage === "calibrate"}
             onPickPoint={pickPoint}
             onHover={setHover}
           />
@@ -275,6 +314,7 @@ export default function App() {
                   <button onClick={deleteLast} disabled={measurements.length === 0}>刪除最後一筆</button>
                   <button onClick={clearAll} disabled={measurements.length === 0}>全部清空</button>
                   <button onClick={downloadCsv} disabled={measurements.length === 0 || !calibration}>下載 CSV</button>
+                  <button onClick={downloadPng} disabled={measurements.length === 0 || !image}>下載 PNG</button>
                   <span style={{ color: "#555" }}>
                     已量測：<b>{measurements.length}</b> 筆
                   </span>

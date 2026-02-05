@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Measurement, Mode, Point } from "../core/types";
-import { norm, perp, sub } from "../core/math";
-import { clipInfiniteLineToRect } from "../core/clip";
+import { NORMAL_MARK_LENGTH, getNormalSegments } from "../core/overlay";
 import {
   canvasToImg,
   computeContainViewport,
@@ -14,6 +13,9 @@ type Props = {
   mode: Mode;
   measurements: Measurement[];
   currentP1: Point | null;
+  calibrationP1: Point | null;
+  calibrationP2: Point | null;
+  showCalibration: boolean;
   onPickPoint: (pImg: Point) => void;
   onHover: (pImg: Point | null) => void;
 };
@@ -23,6 +25,9 @@ export default function MeasureCanvas({
   mode,
   measurements,
   currentP1,
+  calibrationP1,
+  calibrationP2,
+  showCalibration,
   onPickPoint,
   onHover,
 }: Props) {
@@ -111,9 +116,6 @@ export default function MeasureCanvas({
     // 影像
     ctx.drawImage(image, vp.offsetX, vp.offsetY, vp.drawW, vp.drawH);
 
-    const imgW = image.width;
-    const imgH = image.height;
-
     // helpers
     const drawLine = (a: Point, b: Point, width = 1) => {
       const A = imgToCanvas(a, vp);
@@ -133,31 +135,33 @@ export default function MeasureCanvas({
     };
 
     const drawAuxNormals = (p1: Point, p2: Point, mode: Mode) => {
-      const v = sub(p2, p1);
-      const n = norm(perp(v));
-      if (!n) return;
-
-      // line through p1, perpendicular to v
-      if (mode === "pl" || mode === "ll") {
-        const seg = clipInfiniteLineToRect(p1, n, imgW, imgH);
-        if (seg) drawLine(seg[0], seg[1], 1);
-      }
-
-      // line through p2, perpendicular to v (only ll)
-      if (mode === "ll") {
-        const seg = clipInfiniteLineToRect(p2, n, imgW, imgH);
-        if (seg) drawLine(seg[0], seg[1], 1);
+      const segments = getNormalSegments(p1, p2, mode, NORMAL_MARK_LENGTH);
+      for (const segment of segments) {
+        drawLine(segment[0], segment[1], 1);
       }
     };
 
-    // 已完成量測：留「輔助線 + 端點」
+    const drawCalibration = () => {
+      if (!calibrationP1) return;
+      const previewP2 = calibrationP2 ?? hoverImg;
+      if (!previewP2) {
+        ctx.fillStyle = "rgba(255,200,0,0.95)";
+        drawDot(calibrationP1, 3.5);
+        return;
+      }
+      ctx.strokeStyle = "rgba(255,200,0,0.9)";
+      ctx.fillStyle = "rgba(255,200,0,0.95)";
+      drawLine(calibrationP1, previewP2, 1.5);
+      drawDot(calibrationP1, 3.5);
+      drawDot(previewP2, 3.5);
+    };
+
+    // 已完成量測：留「輔助線」
     ctx.strokeStyle = "rgba(255,255,255,0.85)";
     ctx.fillStyle = "rgba(255,255,255,0.95)";
     for (const m of measurements) {
       drawLine(m.p1, m.p2, 1.5);          // 輔助線 1（量測線）
       drawAuxNormals(m.p1, m.p2, m.mode); // 輔助線 2/3（依模式）
-      drawDot(m.p1, 3.2);                 // 端點
-      drawDot(m.p2, 3.2);
     }
 
     // 預覽（正在量）
@@ -166,10 +170,24 @@ export default function MeasureCanvas({
       ctx.fillStyle = "rgba(0,255,255,0.95)";
       drawLine(currentP1, hoverImg, 1.5);
       drawAuxNormals(currentP1, hoverImg, mode);
-      drawDot(currentP1, 3.5);
-      drawDot(hoverImg, 3.5);
     }
-  }, [image, vp, size.h, size.w, measurements, currentP1, hoverImg, mode]);
+
+    if (showCalibration) {
+      drawCalibration();
+    }
+  }, [
+    image,
+    vp,
+    size.h,
+    size.w,
+    measurements,
+    currentP1,
+    hoverImg,
+    mode,
+    calibrationP1,
+    calibrationP2,
+    showCalibration,
+  ]);
 
   return (
     <div
