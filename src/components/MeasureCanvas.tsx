@@ -145,11 +145,19 @@ const MeasureCanvas = forwardRef<MeasureCanvasHandle, Props>(function MeasureCan
       ctx.stroke();
     };
 
-    const drawDot = (p: Point, r = 3) => {
+    // 短法線（|---|風格的端點標記）
+    const SHORT_TICK_LEN = 8; // 像素長度（canvas座標）
+
+    const drawShortTick = (p: Point, direction: Point, width = 1.5) => {
+      const n = norm(perp(direction));
+      if (!n) return;
       const P = imgToCanvas(p, vp);
+      const halfLen = SHORT_TICK_LEN;
+      ctx.lineWidth = width;
       ctx.beginPath();
-      ctx.arc(P.x, P.y, r, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(P.x - n.x * halfLen, P.y - n.y * halfLen);
+      ctx.lineTo(P.x + n.x * halfLen, P.y + n.y * halfLen);
+      ctx.stroke();
     };
 
     const drawAuxNormals = (p1: Point, p2: Point, mode: Mode) => {
@@ -157,27 +165,30 @@ const MeasureCanvas = forwardRef<MeasureCanvasHandle, Props>(function MeasureCan
       const n = norm(perp(v));
       if (!n) return;
 
-      // line through p1, perpendicular to v
-      if (mode === "pl" || mode === "ll") {
-        const seg = clipInfiniteLineToRect(p1, n, imgW, imgH);
-        if (seg) drawLine(seg[0], seg[1], 1);
-      }
-
-      // line through p2, perpendicular to v (only ll)
-      if (mode === "ll") {
-        const seg = clipInfiniteLineToRect(p2, n, imgW, imgH);
-        if (seg) drawLine(seg[0], seg[1], 1);
+      if (mode === "pp") {
+        // 點-點：兩端都畫短法線
+        drawShortTick(p1, v);
+        drawShortTick(p2, v);
+      } else if (mode === "pl") {
+        // 點-線：p1 長輔助線，p2 短法線
+        const seg1 = clipInfiniteLineToRect(p1, n, imgW, imgH);
+        if (seg1) drawLine(seg1[0], seg1[1], 1);
+        drawShortTick(p2, v);
+      } else if (mode === "ll") {
+        // 線-線：兩端都畫長輔助線
+        const seg1 = clipInfiniteLineToRect(p1, n, imgW, imgH);
+        if (seg1) drawLine(seg1[0], seg1[1], 1);
+        const seg2 = clipInfiniteLineToRect(p2, n, imgW, imgH);
+        if (seg2) drawLine(seg2[0], seg2[1], 1);
       }
     };
 
-    // 已完成量測：留「輔助線 + 端點」
+    // 已完成量測：留「輔助線」（無端點圓點）
     ctx.strokeStyle = "rgba(255,255,255,0.85)";
     ctx.fillStyle = "rgba(255,255,255,0.95)";
     for (const m of measurements) {
-      drawLine(m.p1, m.p2, 1.5);          // 輔助線 1（量測線）
-      drawAuxNormals(m.p1, m.p2, m.mode); // 輔助線 2/3（依模式）
-      drawDot(m.p1, 3.2);                 // 端點
-      drawDot(m.p2, 3.2);
+      drawLine(m.p1, m.p2, 1.5);          // 量測線
+      drawAuxNormals(m.p1, m.p2, m.mode); // 輔助線（依模式）
     }
 
     // 預覽（正在量）
@@ -186,8 +197,6 @@ const MeasureCanvas = forwardRef<MeasureCanvasHandle, Props>(function MeasureCan
       ctx.fillStyle = "rgba(0,255,255,0.95)";
       drawLine(currentP1, hoverImg, 1.5);
       drawAuxNormals(currentP1, hoverImg, mode);
-      drawDot(currentP1, 3.5);
-      drawDot(hoverImg, 3.5);
     }
   }, [image, vp, size.h, size.w, measurements, currentP1, hoverImg, mode]);
 
