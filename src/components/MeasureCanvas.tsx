@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from "react";
 import type { Measurement, Mode, Point } from "../core/types";
 import { norm, perp, sub } from "../core/math";
 import { clipInfiniteLineToRect } from "../core/clip";
@@ -18,17 +18,37 @@ type Props = {
   onHover: (pImg: Point | null) => void;
 };
 
-export default function MeasureCanvas({
+export type MeasureCanvasHandle = {
+  downloadPng: () => void;
+};
+
+const MeasureCanvas = forwardRef<MeasureCanvasHandle, Props>(function MeasureCanvas({
   image,
   mode,
   measurements,
   currentP1,
   onPickPoint,
   onHover,
-}: Props) {
+}, ref) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [size, setSize] = useState({ w: 800, h: 520 });
+
+  useImperativeHandle(ref, () => ({
+    downloadPng() {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "sem_measurement.png";
+        a.click();
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    },
+  }));
 
   // ResizeObserver：避免 CSS 尺寸變了但 canvas 不重畫
   useEffect(() => {
@@ -192,4 +212,6 @@ export default function MeasureCanvas({
       />
     </div>
   );
-}
+});
+
+export default MeasureCanvas;

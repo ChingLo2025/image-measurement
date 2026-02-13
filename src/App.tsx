@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import MeasureCanvas from "./components/MeasureCanvas";
+import type { MeasureCanvasHandle } from "./components/MeasureCanvas";
 import type { Calibration, Measurement, Mode, Point, Stage } from "./core/types";
 import { dist } from "./core/math";
 import { downloadTextFile, measurementsToCsv } from "./core/csv";
@@ -36,6 +37,8 @@ export default function App() {
   const [calValue, setCalValue] = useState<string>(""); // real length
   const [calUnit, setCalUnit] = useState<string>("nm");
   const [calibration, setCalibration] = useState<Calibration | null>(null);
+
+  const canvasRef = useRef<MeasureCanvasHandle>(null);
 
   // Measurement step
   const [mode, setMode] = useState<Mode>("pp");
@@ -196,6 +199,7 @@ export default function App() {
       {stage !== "upload" && (
         <>
           <MeasureCanvas
+            ref={canvasRef}
             image={image}
             mode={stage === "calibrate" ? "pp" : mode}
             measurements={
@@ -275,6 +279,7 @@ export default function App() {
                   <button onClick={deleteLast} disabled={measurements.length === 0}>刪除最後一筆</button>
                   <button onClick={clearAll} disabled={measurements.length === 0}>全部清空</button>
                   <button onClick={downloadCsv} disabled={measurements.length === 0 || !calibration}>下載 CSV</button>
+                  <button onClick={() => canvasRef.current?.downloadPng()} disabled={measurements.length === 0}>下載 PNG</button>
                   <span style={{ color: "#555" }}>
                     已量測：<b>{measurements.length}</b> 筆
                   </span>
