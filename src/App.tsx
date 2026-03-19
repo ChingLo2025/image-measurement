@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import HistogramPanel from "./components/HistogramPanel";
 import MeasureCanvas from "./components/MeasureCanvas";
 import type { MeasureCanvasHandle } from "./components/MeasureCanvas";
 import type { Calibration, Measurement, Mode, Point, Stage } from "./core/types";
@@ -45,6 +46,7 @@ export default function App() {
   const [currentP1, setCurrentP1] = useState<Point | null>(null);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [hover, setHover] = useState<Point | null>(null);
+  const [showHistogram, setShowHistogram] = useState(false);
 
   const calPxLen = useMemo(() => {
     if (!calP1 || !calP2) return null;
@@ -70,6 +72,7 @@ export default function App() {
     setCurrentP1(null);
     setMeasurements([]);
     setHover(null);
+    setShowHistogram(false);
   }
 
   function backOneStep() {
@@ -79,6 +82,7 @@ export default function App() {
       setCurrentP1(null);
       setMeasurements([]);
       setHover(null);
+      setShowHistogram(false);
       return;
     }
     if (stage === "calibrate") {
@@ -103,6 +107,7 @@ export default function App() {
     setCalP2(null);
     setMeasurements([]);
     setCurrentP1(null);
+    setShowHistogram(false);
   }
 
   function pickPoint(pImg: Point) {
@@ -154,16 +159,22 @@ export default function App() {
     setStage("measure");
     setCurrentP1(null);
     setMeasurements([]);
+    setShowHistogram(false);
   }
 
   function deleteLast() {
-    setMeasurements(ms => ms.slice(0, -1));
+    setMeasurements(ms => {
+      const next = ms.slice(0, -1);
+      if (next.length === 0) setShowHistogram(false);
+      return next;
+    });
     setCurrentP1(null);
   }
 
   function clearAll() {
     setMeasurements([]);
     setCurrentP1(null);
+    setShowHistogram(false);
   }
 
   function downloadCsv() {
@@ -171,6 +182,11 @@ export default function App() {
     const csv = measurementsToCsv(measurements, calibration);
     downloadTextFile("sem_measurements.csv", csv);
   }
+
+  const measurementValues = useMemo(() => {
+    if (!calibration) return [];
+    return measurements.map(m => m.px * calibration.unitPerPx);
+  }, [measurements, calibration]);
 
   return (
     <div style={{ maxWidth: 980, margin: "24px auto", padding: "0 16px", fontFamily: "system-ui" }}>
@@ -280,6 +296,9 @@ export default function App() {
                   <button onClick={clearAll} disabled={measurements.length === 0}>全部清空</button>
                   <button onClick={downloadCsv} disabled={measurements.length === 0 || !calibration}>下載 CSV</button>
                   <button onClick={() => canvasRef.current?.downloadPng()} disabled={measurements.length === 0}>下載 PNG</button>
+                  <button onClick={() => setShowHistogram(true)} disabled={measurementValues.length === 0 || !calibration}>
+                    生成互動式長條圖
+                  </button>
                   <span style={{ color: "#555" }}>
                     已量測：<b>{measurements.length}</b> 筆
                   </span>
@@ -290,6 +309,10 @@ export default function App() {
               </div>
             )}
           </div>
+
+          {stage === "measure" && showHistogram && calibration && measurementValues.length > 0 && (
+            <HistogramPanel values={measurementValues} unit={calibration.unit} />
+          )}
         </>
       )}
     </div>
