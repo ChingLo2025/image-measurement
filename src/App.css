@@ -1,42 +1,112 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.chart-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid #d8dee8;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.chart-panel__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.chart-panel__header h3 {
+  margin: 0;
+  font-size: 1.2rem;
 }
 
-.card {
-  padding: 2em;
+.chart-panel__header p {
+  margin: 6px 0 0;
+  color: #526071;
 }
 
-.read-the-docs {
-  color: #888;
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #dce5f0;
+  background: #ffffff;
+  display: grid;
+  gap: 6px;
+}
+
+.stat-card span {
+  color: #617082;
+  font-size: 0.95rem;
+}
+
+.stat-card strong {
+  color: #142133;
+  font-size: 1.05rem;
+}
+
+.slider-card {
+  padding: 16px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #dce5f0;
+}
+
+.slider-card__label-row,
+.slider-card__range-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.slider-card__label-row {
+  margin-bottom: 10px;
+}
+
+.slider-card__range-row {
+  margin-top: 8px;
+  color: #617082;
+  font-size: 0.92rem;
+}
+
+.bin-slider {
+  width: min(100%, 640px);
+  display: block;
+}
+
+.chart-surface {
+  position: relative;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.chart-surface svg {
+  max-width: 100%;
+  min-width: 720px;
+  height: auto;
+  display: block;
+  border-radius: 16px;
+}
+
+.chart-tooltip {
+  margin-top: 12px;
+  display: inline-grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(20, 33, 51, 0.92);
+  color: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
 }

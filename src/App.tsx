@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import MeasureCanvas from "./components/MeasureCanvas";
+import HistogramPanel from "./components/HistogramPanel";
 import type { MeasureCanvasHandle } from "./components/MeasureCanvas";
 import type { Calibration, Measurement, Mode, Point, Stage } from "./core/types";
 import { dist } from "./core/math";
@@ -45,6 +46,12 @@ export default function App() {
   const [currentP1, setCurrentP1] = useState<Point | null>(null);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [hover, setHover] = useState<Point | null>(null);
+  const [showHistogram, setShowHistogram] = useState(false);
+
+  const calibratedDistances = useMemo(() => {
+    if (!calibration) return [];
+    return measurements.map((measurement) => measurement.px * calibration.unitPerPx);
+  }, [calibration, measurements]);
 
   const calPxLen = useMemo(() => {
     if (!calP1 || !calP2) return null;
@@ -70,6 +77,7 @@ export default function App() {
     setCurrentP1(null);
     setMeasurements([]);
     setHover(null);
+    setShowHistogram(false);
   }
 
   function backOneStep() {
@@ -79,6 +87,7 @@ export default function App() {
       setCurrentP1(null);
       setMeasurements([]);
       setHover(null);
+      setShowHistogram(false);
       return;
     }
     if (stage === "calibrate") {
@@ -103,6 +112,7 @@ export default function App() {
     setCalP2(null);
     setMeasurements([]);
     setCurrentP1(null);
+    setShowHistogram(false);
   }
 
   function pickPoint(pImg: Point) {
@@ -154,6 +164,7 @@ export default function App() {
     setStage("measure");
     setCurrentP1(null);
     setMeasurements([]);
+    setShowHistogram(false);
   }
 
   function deleteLast() {
@@ -164,6 +175,7 @@ export default function App() {
   function clearAll() {
     setMeasurements([]);
     setCurrentP1(null);
+    setShowHistogram(false);
   }
 
   function downloadCsv() {
@@ -280,6 +292,9 @@ export default function App() {
                   <button onClick={clearAll} disabled={measurements.length === 0}>全部清空</button>
                   <button onClick={downloadCsv} disabled={measurements.length === 0 || !calibration}>下載 CSV</button>
                   <button onClick={() => canvasRef.current?.downloadPng()} disabled={measurements.length === 0}>下載 PNG</button>
+                  <button onClick={() => setShowHistogram((visible) => !visible)} disabled={measurements.length === 0}>
+                    {showHistogram ? "隱藏互動式長條圖" : "生成互動式長條圖"}
+                  </button>
                   <span style={{ color: "#555" }}>
                     已量測：<b>{measurements.length}</b> 筆
                   </span>
@@ -290,6 +305,12 @@ export default function App() {
               </div>
             )}
           </div>
+
+          {stage === "measure" && showHistogram && calibratedDistances.length > 0 && calibration && (
+            <div style={{ marginTop: 16 }}>
+              <HistogramPanel distances={calibratedDistances} unit={calibration.unit} />
+            </div>
+          )}
         </>
       )}
     </div>
