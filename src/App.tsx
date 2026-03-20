@@ -344,6 +344,10 @@ export default function App() {
   }
 
   const activeBin = hoveredBinIndex === null ? null : histogram[hoveredBinIndex] ?? null;
+  const calibrationPreview = useMemo<Measurement[]>(() => {
+    if (stage !== "calibrate" || !calP1 || !calP2) return [];
+    return [{ id: 0, mode: "pp", p1: calP1, p2: calP2, px: dist(calP1, calP2) }];
+  }, [stage, calP1, calP2]);
 
   return (
     <div className="app-shell">
@@ -375,8 +379,8 @@ export default function App() {
             ref={canvasRef}
             image={image}
             mode={stage === "calibrate" ? "pp" : mode}
-            measurements={stage === "measure" ? measurements : []}
-            currentP1={stage === "measure" ? currentP1 : null}
+            measurements={stage === "measure" ? measurements : calibrationPreview}
+            currentP1={stage === "measure" ? currentP1 : calP1 && !calP2 ? calP1 : null}
             onPickPoint={pickPoint}
             onHover={setHover}
           />
@@ -427,10 +431,13 @@ export default function App() {
                       onClick={() => { setMode(value); setCurrentP1(null); }}
                       style={{
                         fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                        fontSize: "1rem",
+                        fontWeight: 700,
+                        color: value === mode ? "#0f172a" : "#334155",
                         padding: "6px 10px",
                         borderRadius: 8,
-                        border: value === mode ? "2px solid #111" : "1px solid #ccc",
-                        background: value === mode ? "#f2f2f2" : "#fff",
+                        border: value === mode ? "2px solid #111" : "1px solid #94a3b8",
+                        background: value === mode ? "#e2e8f0" : "#fff",
                       }}
                       title={value}
                     >
