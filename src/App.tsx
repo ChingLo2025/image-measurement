@@ -375,8 +375,10 @@ export default function App() {
             ref={canvasRef}
             image={image}
             mode={stage === "calibrate" ? "pp" : mode}
-            measurements={stage === "measure" ? measurements : []}
-            currentP1={stage === "measure" ? currentP1 : null}
+            measurements={stage === "calibrate"
+              ? (calP1 && calP2 ? [{ id: 0, mode: "pp", p1: calP1, p2: calP2, px: dist(calP1, calP2) }] : [])
+              : measurements}
+            currentP1={stage === "calibrate" ? calP1 : currentP1}
             onPickPoint={pickPoint}
             onHover={setHover}
           />
@@ -421,22 +423,19 @@ export default function App() {
               <div className="panel stretch-panel">
                 <div className="inline-data-row">
                   <div className="panel-title">量測模式</div>
-                  {(["pp", "pl", "ll"] as Mode[]).map((value) => (
-                    <button
-                      key={value}
-                      onClick={() => { setMode(value); setCurrentP1(null); }}
-                      style={{
-                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: value === mode ? "2px solid #111" : "1px solid #ccc",
-                        background: value === mode ? "#f2f2f2" : "#fff",
-                      }}
-                      title={value}
-                    >
-                      {modeIcon(value)}
-                    </button>
-                  ))}
+                  {(["pp", "pl", "ll"] as Mode[]).map((value) => {
+                    const isActive = value === mode;
+                    return (
+                      <button
+                        key={value}
+                        onClick={() => { setMode(value); setCurrentP1(null); }}
+                        className={`mode-button${isActive ? " is-active" : ""}`}
+                        title={value}
+                      >
+                        <span className="mode-button-icon">{modeIcon(value)}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className="helper-text compact-top">
