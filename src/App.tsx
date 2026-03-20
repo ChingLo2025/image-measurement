@@ -212,6 +212,17 @@ export default function App() {
     return dist(calP1, calP2);
   }, [calP1, calP2]);
 
+  const calibrationPreviewMeasurements = useMemo<Measurement[]>(() => {
+    if (!calP1 || !calP2) return [];
+    return [{
+      id: 0,
+      mode: "pp",
+      p1: calP1,
+      p2: calP2,
+      px: dist(calP1, calP2),
+    }];
+  }, [calP1, calP2]);
+
   const lastPreviewPx = useMemo(() => {
     if (!currentP1 || !hover) return null;
     return dist(currentP1, hover);
@@ -375,8 +386,8 @@ export default function App() {
             ref={canvasRef}
             image={image}
             mode={stage === "calibrate" ? "pp" : mode}
-            measurements={stage === "measure" ? measurements : []}
-            currentP1={stage === "measure" ? currentP1 : null}
+            measurements={stage === "measure" ? measurements : calibrationPreviewMeasurements}
+            currentP1={stage === "measure" ? currentP1 : calP1}
             onPickPoint={pickPoint}
             onHover={setHover}
           />
@@ -425,13 +436,7 @@ export default function App() {
                     <button
                       key={value}
                       onClick={() => { setMode(value); setCurrentP1(null); }}
-                      style={{
-                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: value === mode ? "2px solid #111" : "1px solid #ccc",
-                        background: value === mode ? "#f2f2f2" : "#fff",
-                      }}
+                      className={`mode-button${value === mode ? " active" : ""}`}
                       title={value}
                     >
                       {modeIcon(value)}
